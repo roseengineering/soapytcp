@@ -82,5 +82,19 @@ start_rtl_command="soapytcp --stdout --noserver --freq {center_freq} --rate {sam
 
 $ soapytcp --freq 99e6 --rate 2.048e3 --gain 30 --out stream.cf32
 
+# why?
+
+Basically I created soapytcp so that SDR receivers can be shared over a network - LAN party
+style.  My osmotcp receiver was also created for this purpose, but it relies on having
+GNURadio installed which is complex to install.  Soapy is much easier to install.
+The RTLTCP protcol uses about 40 megabits per second, which barely fits over
+a 100 Mb LAN, however it is streamable over a 1Gb LAN.  And while the RTLTCP protocol 
+only uses 8 bits per sample it can be used to monitor a live stream.  The file output feature 
+of soapytcp will let you save the full cf32 stream to a file for later review.
+
+
+
+
+
 
 
