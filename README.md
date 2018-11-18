@@ -69,8 +69,8 @@ settings, using freeze can prevent conflicts.
 
 ## with openwebrx
 
-For example for openwebrx, to use soapytcp as the receiver I set the following
-in config\_webrx.py then run python openwebrx.py
+For example with openwebrx, to use soapytcp as the receiver I set the following
+in config\_webrx.py then run "python openwebrx.py".
 
 ```
 format_conversion=""
