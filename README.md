@@ -66,5 +66,20 @@ can be disabled with --nopeak.
 The --freeze option prevents the ExtIO from changing the frequency, sampling rate, and
 gain settings of the device.  
 
+## with openwebrx
+
+For example for openwebrx, to use soapytcp as the receiver I set the following
+in config\_webrx.py then run python openwebrx.py
+
+```
+format_conversion=""
+start_rtl_command="soapytcp --stdout --noserver --freq {center_freq} --rate {samp_rate}".format(
+    rf_gain=rf_gain, center_freq=center_freq, samp_rate=samp_rate)
+```
+
+## as a rtlsdr server and to a file
+
+$ soapytcp --freq 99e6 --rate 2.048e3 --gain 30 --out stream.cf32
+
 
 
