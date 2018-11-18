@@ -89,8 +89,9 @@ style.  My osmotcp receiver was also created for this purpose, but it relies on 
 GNURadio installed which is complex to install.  Soapy is much easier to install.
 The RTLTCP protcol uses about 40 megabits per second, which barely fits over
 a 100 Mb LAN, however it is streamable over a 1Gb LAN.  And while the RTLTCP protocol 
-only uses 8 bits per sample it can be used to monitor a live stream.  The file output feature 
-of soapytcp will let you save the full cf32 stream to a file for later review.
+only uses 8 bits per sample it can be used to monitor and change the frequency and gain of
+a live stream.  The file output feature of soapytcp will let you save the full cf32 stream 
+to a file for later review.
 
 
 
