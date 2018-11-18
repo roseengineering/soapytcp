@@ -1,0 +1,199 @@
+#!/usr/bin/python3
+
+import sys, argparse, select, socket, struct
+import numpy as np
+import SoapySDR
+from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+
+tuner_number = 5 # R820T
+tuner_gains = 29 # R820T
+dongle_info = struct.pack('>4sII', b'RTL0', tuner_number, tuner_gains)
+
+command_fmt = ">BI"
+command_size = struct.calcsize(command_fmt)
+
+class Server:
+
+    def __init__(self, **kw):
+        self.insocks = []
+        self.outsocks = []
+        self.readbuf = {}
+        self.clients = {}
+        for key, value in kw.items():
+            setattr(self, key, value)
+
+
+    def peak_meter(self, data):
+        self.max = max(self.max, abs(data.min()), abs(data.max()))
+        if self.samples > self.rate / 2:
+            n = 20 * np.log10(self.max + .0000000001)
+            print("\33[2K%6.1f dBFS" % n, end='\r', file=sys.stderr)
+            self.samples = 0
+            self.max = 0
+
+
+    def open_conn(self, sock, client_address):
+        print('new connection from %s:%s' % client_address, file=sys.stderr)
+        sock.setblocking(0)
+        self.insocks.append(sock)
+        self.outsocks.append(sock)
+        self.readbuf[sock] = b''
+        self.clients[sock] = client_address
+
+
+    def close_conn(self, sock):
+        print('closing connection from %s:%s' % self.clients[sock], file=sys.stderr)
+        self.outsocks.remove(sock)
+        self.insocks.remove(sock)
+        del self.readbuf[sock]
+        del self.clients[sock]
+        sock.close()
+
+
+    def cleanup_conn(self):
+        for sock in self.insocks:
+            sock.close()
+
+
+    def handle_conn(self, sdr, buff):
+        data = (buff * 128 + 128).astype('B')
+        data = data.tobytes()
+
+        readable, writable, exceptional = select.select(
+            self.insocks, self.outsocks, self.outsocks, 0)
+
+        for sock in self.outsocks:
+            if sock in exceptional:
+                self.close_conn(sock)
+
+        for sock in self.outsocks:
+            if sock in writable:
+                try:
+                    sock.sendall(data)
+                except OSError:
+                    self.close_conn(sock)
+
+        for sock in self.insocks:
+            if sock in readable:
+                if sock is self.server:
+                    conn, client_address = sock.accept()
+                    self.open_conn(conn, client_address)
+                    conn.sendall(dongle_info)
+                else:
+                    try:
+                        buf = sock.recv(command_size - len(self.readbuf[sock]))
+                    except OSError:
+                        self.close_conn(sock)
+                    self.readbuf[sock] += buf
+                    if len(self.readbuf[sock]) == command_size:
+                        self.handle_command(sdr, self.readbuf[sock])
+                        self.readbuf[sock] = b''
+
+    def status(self, sdr):
+        self.rate = sdr.getSampleRate(SOAPY_SDR_RX, 0)
+        self.freq = sdr.getFrequency(SOAPY_SDR_RX, 0)
+        self.gain = sdr.getGain(SOAPY_SDR_RX, 0)
+        print('frequency set to %.3f MHz' % (self.freq / 1e6), file=sys.stderr)
+        print('sampling rate set to %.3f MHz' % (self.rate / 1e6), file=sys.stderr)
+        print('gain set to %s dB' % self.gain, file=sys.stderr)
+
+
+    def handle_command(self, sdr, data):
+        command, param = struct.unpack(command_fmt, data)
+        if self.freeze:
+            print('frozen settings, ignoring command: 0x%02x: %s' % (command, param), file=sys.stderr)
+        elif command == 0x01:
+            print('0x%02x set_center_freq: %s Hz' % (command, param), file=sys.stderr)
+            sdr.setFrequency(SOAPY_SDR_RX, 0, param)
+        elif command == 0x02:
+            print('0x%02x set_sample_rate: %s Hz' % (command, param), file=sys.stderr)
+            sdr.setSampleRate(SOAPY_SDR_RX, 0, param)
+        elif command == 0x03:
+            print('0x%02x set_gain_mode: %s (1 for manual)' % (command, param), file=sys.stderr)
+            sdr.setGainMode(SOAPY_SDR_RX, 0, not param);
+        elif command == 0x04:
+            param = param / 10
+            print('0x%02x set_gain: %s' % (command, param), file=sys.stderr)
+            sdr.setGain(SOAPY_SDR_RX, 0, param);
+        else:
+            print('0x%02x unimplemented: %s' % (command, param), file=sys.stderr)
+
+
+    def init_server(self):
+        server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
+        server.setblocking(0)  # set non-blocking mode
+        server_address = (self.host, self.port)
+        server.bind(server_address)
+        server.listen()
+        print('listening on %s port %s' % server_address, file=sys.stderr)
+        self.insocks.append(server)
+        self.server = server
+
+
+    def start(self):
+        driver = self.driver
+        if not driver:
+            for res in SoapySDR.Device.enumerate(): 
+                driver = res['driver']
+
+        sdr = SoapySDR.Device(dict(driver=driver))
+        stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+        size = 1024
+        data = np.array([0] * size * 2, np.float32)
+        sdr.activateStream(stream) 
+
+        outfile = open(self.out, "wb") if self.out else None
+        stdout = self.stdout
+        noserver = self.noserver
+        nopeak = self.nopeak
+
+        if self.auto: sdr.setGainMode(SOAPY_SDR_RX, 0, self.auto);
+        if self.freq: sdr.setFrequency(SOAPY_SDR_RX, 0, self.freq)
+        if self.rate: sdr.setSampleRate(SOAPY_SDR_RX, 0, self.rate)
+        if self.gain: sdr.setGain(SOAPY_SDR_RX, 0, self.gain)
+
+        self.status(sdr)
+        self.samples = 0
+        self.max = 0
+
+        try:
+            if not noserver: self.init_server()
+            while True:
+                sr = sdr.readStream(stream, [data], size)
+                self.samples += sr.ret
+                if stdout: sys.stdout.buffer.write(data)
+                if outfile: outfile.write(data)
+                if not nopeak: self.peak_meter(data)
+                if not noserver: self.handle_conn(sdr, data)
+        except KeyboardInterrupt:
+            pass
+
+        if outfile: outfile.close()
+        if not noserver: self.cleanup_conn()
+        sdr.deactivateStream(stream) 
+        sdr.closeStream(stream)
+
+
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--out", help="write cf32 samples to output file")
+    parser.add_argument("--driver", help="driver name")
+    parser.add_argument("--host", help="server host address", default="127.0.0.1")
+    parser.add_argument("--port", help="server port address", type=int, default=1234)
+    parser.add_argument("--stdout", help="write cf32 samples to standard output", action="store_true")
+    parser.add_argument("--freq", help="set center frequency (Hz)", type=float)
+    parser.add_argument("--rate", help="set sample rate (Hz)", type=float)
+    parser.add_argument("--gain", help="set gain (dB)", type=float)
+    parser.add_argument("--auto", help="turn on automatic gain", action="store_true")
+    parser.add_argument("--noserver", help="disable RTLTCP server", action="store_true")
+    parser.add_argument("--nopeak", help="disable peak meter", action="store_true")
+    parser.add_argument("--freeze", help="freeze settings", action="store_true")
+    args = parser.parse_args()
+    server = Server(**vars(args))
+    server.start()
+
+if __name__ == "__main__":
+    main()
+
