@@ -64,7 +64,8 @@ Also by default a level meter is displayed measured in dBFS (0 dB is full scale)
 can be disabled with --nopeak.
 
 The --freeze option prevents the ExtIO from changing the frequency, sampling rate, and
-gain settings of the device.  
+gain settings of the device.  Note, since multiple users can connect to the server and change
+settings, using freeze can prevent conflicts.
 
 ## with openwebrx
 
