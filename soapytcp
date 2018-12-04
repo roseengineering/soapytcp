@@ -100,11 +100,11 @@ class Server:
         self.rate = sdr.getSampleRate(SOAPY_SDR_RX, 0)
         self.freq = sdr.getFrequency(SOAPY_SDR_RX, 0)
         self.gain = sdr.getGain(SOAPY_SDR_RX, 0)
-        print('frequency set to %.3f MHz' % 
+        print('frequency is %.3f MHz' % 
               (self.freq / 1e6), file=sys.stderr)
-        print('sampling rate set to %.3f MHz' % 
+        print('sampling rate is %.3f MHz' % 
               (self.rate / 1e6), file=sys.stderr)
-        print('gain set to %s dB' % 
+        print('gain is %s dB' % 
               self.gain, file=sys.stderr)
 
 
@@ -165,11 +165,11 @@ class Server:
         noserver = self.noserver
         nopeak = self.nopeak
 
-        if self.freq: 
+        if self.freq is not None: 
             sdr.setFrequency(SOAPY_SDR_RX, 0, self.freq)
-        if self.rate: 
+        if self.rate is not None: 
             sdr.setSampleRate(SOAPY_SDR_RX, 0, self.rate)
-        if self.gain: 
+        if self.gain is not None: 
             sdr.setGainMode(SOAPY_SDR_RX, 0, False);
             sdr.setGain(SOAPY_SDR_RX, 0, self.gain)
         if self.auto: 
