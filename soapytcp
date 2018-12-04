@@ -32,13 +32,14 @@ class Server:
         self.max = max(self.max, abs(data.min()), abs(data.max()))
         if self.samples > self.rate / 2:
             n = 20 * np.log10(self.max + .0000000001)
-            print("\33[2K%6.1f dBFS" % n, end='\r', file=sys.stderr)
+            print("\33[2K%6.1f dBFS" % n, end="\r", file=sys.stderr)
             self.samples = 0
             self.max = 0
 
 
     def open_conn(self, sock, client_address):
-        print('new connection from %s:%s' % client_address, file=sys.stderr)
+        print('new connection from %s:%s' % 
+              client_address, file=sys.stderr)
         sock.setblocking(0)
         self.insocks.append(sock)
         self.outsocks.append(sock)
@@ -47,7 +48,8 @@ class Server:
 
 
     def close_conn(self, sock):
-        print('closing connection from %s:%s' % self.clients[sock], file=sys.stderr)
+        print('closing connection from %s:%s' % 
+              self.clients[sock], file=sys.stderr)
         self.outsocks.remove(sock)
         self.insocks.remove(sock)
         del self.readbuf[sock]
@@ -60,12 +62,16 @@ class Server:
             sock.close()
 
 
-    def handle_conn(self, sdr, buff):
-        self.tick += 1
-        if self.tick % self.block: return 
+# data = data.tobytes()
+#   def handle_conn(self, sdr, buff):
+#       if self.float:
+#           data = buff
+#       else:
+#           data = (buff * 128 + 128).astype('B')
 
-        data = (buff * 128 + 128).astype('B')
-        data = data.tobytes()
+    def handle_conn(self, sdr, data):
+        if not self.float:
+            data = (data * 128 + 128).astype('B')
 
         readable, writable, exceptional = select.select(
             self.insocks, self.outsocks, self.outsocks, 0)
@@ -89,7 +95,8 @@ class Server:
                     conn.sendall(dongle_info)
                 else:
                     try:
-                        buf = sock.recv(command_size - len(self.readbuf[sock]))
+                        n = len(self.readbuf[sock])
+                        buf = sock.recv(command_size - n)
                     except OSError:
                         self.close_conn(sock)
                     self.readbuf[sock] += buf
@@ -97,40 +104,50 @@ class Server:
                         self.handle_command(sdr, self.readbuf[sock])
                         self.readbuf[sock] = b''
 
+
     def status(self, sdr):
         self.rate = sdr.getSampleRate(SOAPY_SDR_RX, 0)
         self.freq = sdr.getFrequency(SOAPY_SDR_RX, 0)
         self.gain = sdr.getGain(SOAPY_SDR_RX, 0)
-        print('frequency set to %.3f MHz' % (self.freq / 1e6), file=sys.stderr)
-        print('sampling rate set to %.3f MHz' % (self.rate / 1e6), file=sys.stderr)
-        print('gain set to %s dB' % self.gain, file=sys.stderr)
+        print('frequency set to %.3f MHz' % 
+              (self.freq / 1e6), file=sys.stderr)
+        print('sampling rate set to %.3f MHz' % 
+              (self.rate / 1e6), file=sys.stderr)
+        print('gain set to %s dB' % 
+              self.gain, file=sys.stderr)
 
 
     def handle_command(self, sdr, data):
         command, param = struct.unpack(command_fmt, data)
         if self.freeze:
-            print('frozen settings, ignoring command: 0x%02x: %s' % (command, param), file=sys.stderr)
+            print('frozen settings, ignoring command: 0x%02x: %s' % 
+                  (command, param), file=sys.stderr)
         elif command == 0x01:
-            print('0x%02x set_center_freq: %s Hz' % (command, param), file=sys.stderr)
+            print('0x%02x set_center_freq: %s Hz' % 
+                  (command, param), file=sys.stderr)
             sdr.setFrequency(SOAPY_SDR_RX, 0, param)
         elif command == 0x02:
-            print('0x%02x set_sample_rate: %s Hz' % (command, param), file=sys.stderr)
+            print('0x%02x set_sample_rate: %s Hz' % 
+                  (command, param), file=sys.stderr)
             sdr.setSampleRate(SOAPY_SDR_RX, 0, param)
         elif command == 0x03:
-            print('0x%02x set_gain_mode: %s (1 for manual)' % (command, param), file=sys.stderr)
+            print('0x%02x set_gain_mode: %s (1 for manual)' % 
+                  (command, param), file=sys.stderr)
             sdr.setGainMode(SOAPY_SDR_RX, 0, not param);
         elif command == 0x04:
             param = param / 10
-            print('0x%02x set_gain: %s' % (command, param), file=sys.stderr)
+            print('0x%02x set_gain: %s' % 
+                  (command, param), file=sys.stderr)
             sdr.setGain(SOAPY_SDR_RX, 0, param);
         else:
-            print('0x%02x unimplemented: %s' % (command, param), file=sys.stderr)
+            print('0x%02x unimplemented: %s' % 
+                  (command, param), file=sys.stderr)
 
 
     def init_server(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
-        server.setblocking(0)  # set non-blocking mode
+        server.setblocking(0)
         server_address = (self.host, self.port)
         server.bind(server_address)
         server.listen()
@@ -168,10 +185,15 @@ class Server:
             while True:
                 sr = sdr.readStream(stream, [data], size)
                 self.samples += sr.ret
-                if stdout: sys.stdout.buffer.write(data)
-                if outfile: outfile.write(data)
-                if not nopeak: self.peak_meter(data)
-                if not noserver: self.handle_conn(sdr, data)
+                self.tick += 1
+                if stdout: 
+                    sys.stdout.buffer.write(data)
+                if outfile: 
+                    outfile.write(data)
+                if not nopeak: 
+                    self.peak_meter(data)
+                if not noserver and self.tick % self.block == 0: 
+                    self.handle_conn(sdr, data)
         except KeyboardInterrupt:
             pass
 
@@ -184,19 +206,34 @@ class Server:
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--out", help="write cf32 samples to output file")
-    parser.add_argument("--driver", help="driver name")
-    parser.add_argument("--host", help="server host address", default="127.0.0.1")
-    parser.add_argument("--port", help="server port address", type=int, default=1234)
-    parser.add_argument("--stdout", help="write cf32 samples to standard output", action="store_true")
-    parser.add_argument("--freq", help="set center frequency (Hz)", type=float)
-    parser.add_argument("--rate", help="set sample rate (Hz)", type=float)
-    parser.add_argument("--gain", help="set gain (dB)", type=float)
-    parser.add_argument("--auto", help="turn on automatic gain", action="store_true")
-    parser.add_argument("--block", help="RTLSDR server sends only 1/N blocks", type=int, default=1)
-    parser.add_argument("--noserver", help="disable RTLTCP server", action="store_true")
-    parser.add_argument("--nopeak", help="disable peak meter", action="store_true")
-    parser.add_argument("--freeze", help="freeze settings", action="store_true")
+    parser.add_argument("--out", 
+                        help="write cf32 samples to output file")
+    parser.add_argument("--driver", 
+                        help="driver name")
+    parser.add_argument("--host", default="127.0.0.1",
+                        help="server host address")
+    parser.add_argument("--port", type=int, default=1234,
+                        help="server port address")
+    parser.add_argument("--stdout", action="store_true",
+                        help="write cf32 samples to standard output")
+    parser.add_argument("--freq", type=float,
+                        help="set center frequency (Hz)")
+    parser.add_argument("--rate", type=float,
+                        help="set sample rate (Hz)")
+    parser.add_argument("--gain", type=float,
+                        help="set gain (dB)")
+    parser.add_argument("--auto", action="store_true",
+                        help="turn on automatic gain")
+    parser.add_argument("--block", type=int, default=1,
+                        help="RTLTCP server sends only 1/N blocks")
+    parser.add_argument("--float", action="store_true",
+                        help="RTLTCP server sends 32-bit complex samples")
+    parser.add_argument("--noserver", action="store_true",
+                        help="disable RTLTCP server")
+    parser.add_argument("--nopeak", action="store_true",
+                        help="disable peak meter")
+    parser.add_argument("--freeze", action="store_true",
+                        help="freeze settings")
     args = parser.parse_args()
     server = Server(**vars(args))
     server.start()
