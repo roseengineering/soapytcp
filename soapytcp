@@ -129,6 +129,7 @@ class Server:
             param = param / 10
             print('0x%02x set_gain: %s' % 
                   (command, param), file=sys.stderr)
+            sdr.setGainMode(SOAPY_SDR_RX, 0, False);
             sdr.setGain(SOAPY_SDR_RX, 0, param);
         else:
             print('0x%02x unimplemented: %s' % 
@@ -164,10 +165,15 @@ class Server:
         noserver = self.noserver
         nopeak = self.nopeak
 
-        if self.auto: sdr.setGainMode(SOAPY_SDR_RX, 0, self.auto);
-        if self.freq: sdr.setFrequency(SOAPY_SDR_RX, 0, self.freq)
-        if self.rate: sdr.setSampleRate(SOAPY_SDR_RX, 0, self.rate)
-        if self.gain: sdr.setGain(SOAPY_SDR_RX, 0, self.gain)
+        if self.freq: 
+            sdr.setFrequency(SOAPY_SDR_RX, 0, self.freq)
+        if self.rate: 
+            sdr.setSampleRate(SOAPY_SDR_RX, 0, self.rate)
+        if self.gain: 
+            sdr.setGainMode(SOAPY_SDR_RX, 0, False);
+            sdr.setGain(SOAPY_SDR_RX, 0, self.gain)
+        if self.auto: 
+            sdr.setGainMode(SOAPY_SDR_RX, 0, True);
 
         self.status(sdr)
 
