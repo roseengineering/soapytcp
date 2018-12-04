@@ -5,7 +5,7 @@ A SDR receiver written in Python 3 using the Soapy API. Writes the cf32 stream t
 ```
 usage: soapytcp [-h] [--out OUT] [--driver DRIVER] [--host HOST] [--port PORT]
                 [--stdout] [--freq FREQ] [--rate RATE] [--gain GAIN] [--auto]
-                [--block BLOCK] [--noserver] [--nopeak] [--freeze]
+                [--skip SKIP] [--float] [--noserver] [--nopeak] [--freeze]
 
 optional arguments:
   -h, --help       show this help message and exit
@@ -18,7 +18,8 @@ optional arguments:
   --rate RATE      set sample rate (Hz)
   --gain GAIN      set gain (dB)
   --auto           turn on automatic gain
-  --block BLOCK    RTLSDR server sends only 1/N blocks
+  --skip SKIP      Number of blocks to skip sending over TCP
+  --float          RTLTCP server sends 32-bit complex samples
   --noserver       disable RTLTCP server
   --nopeak         disable peak meter
   --freeze         freeze settings
@@ -67,10 +68,10 @@ The --freeze option prevents the ExtIO from changing the frequency, sampling rat
 gain settings of the device.  Note, since multiple users can connect to the server and change
 settings, using freeze can prevent conflicts.
 
-The --block option lets you reduce the number of data blocks sent by
+The --skip option lets you reduce the number of data blocks sent by
 the RTLTCP server, and therefore the bandwidth used by the server.
-One means all blocks.  Two means every other block.  This is like decimation but retains
-the FFT frequency range.
+For example, one means skip one block, ie send every other block.  It is like decimation 
+but retains the FFT frequency range.
 
 ## with openwebrx
 
