@@ -24,8 +24,6 @@ class Server:
         self.tick = 0
         for key, value in kw.items():
             setattr(self, key, value)
-        if self.block < 1:
-            self.block = 1 
 
 
     def peak_meter(self, data):
@@ -61,13 +59,6 @@ class Server:
         for sock in self.insocks:
             sock.close()
 
-
-# data = data.tobytes()
-#   def handle_conn(self, sdr, buff):
-#       if self.float:
-#           data = buff
-#       else:
-#           data = (buff * 128 + 128).astype('B')
 
     def handle_conn(self, sdr, data):
         if not self.float:
@@ -192,7 +183,7 @@ class Server:
                     outfile.write(data)
                 if not nopeak: 
                     self.peak_meter(data)
-                if not noserver and self.tick % self.block == 0: 
+                if not noserver and self.tick % (self.skip + 1) == 0: 
                     self.handle_conn(sdr, data)
         except KeyboardInterrupt:
             pass
@@ -224,8 +215,8 @@ def main():
                         help="set gain (dB)")
     parser.add_argument("--auto", action="store_true",
                         help="turn on automatic gain")
-    parser.add_argument("--block", type=int, default=1,
-                        help="RTLTCP server sends only 1/N blocks")
+    parser.add_argument("--skip", type=int, default=0,
+                        help="Number of blocks to skip sending over TCP")
     parser.add_argument("--float", action="store_true",
                         help="RTLTCP server sends 32-bit complex samples")
     parser.add_argument("--noserver", action="store_true",
