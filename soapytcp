@@ -30,7 +30,8 @@ class Server:
         self.max = max(self.max, abs(data.min()), abs(data.max()))
         if self.samples > self.rate / 2:
             n = 20 * np.log10(self.max + .0000000001)
-            print("\33[2K%6.1f dBFS" % n, end="\r", file=sys.stderr)
+            buf = "\33[2K%6.1f dBFS\r" if self.dumb else "6.1f dBFS\n"
+            print(buf % n, end="", file=sys.stderr)
             self.samples = 0
             self.max = 0
 
@@ -231,6 +232,8 @@ def main():
                         help="disable peak meter")
     parser.add_argument("--freeze", action="store_true",
                         help="freeze settings")
+    parser.add_argument("--dumb", action="store_true",
+                        help="assume running on a dumb terminal")
     args = parser.parse_args()
     server = Server(**vars(args))
     server.start()
