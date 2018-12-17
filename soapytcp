@@ -28,7 +28,7 @@ class Server:
 
     def peak_meter(self, data):
         self.max = max(self.max, abs(data.min()), abs(data.max()))
-        if self.samples > self.rate / 2:
+        if self.samples > self.rate * self.refresh:
             n = 20 * np.log10(self.max + .0000000001)
             buf = "%6.1f dBFS\n" if self.dumb else "\33[2K%6.1f dBFS\r" 
             print(buf % n, end="", file=sys.stderr)
@@ -161,11 +161,6 @@ class Server:
         data = np.array([0] * size * 2, np.float32)
         sdr.activateStream(stream) 
 
-        outfile = open(self.out, "wb") if self.out else None
-        stdout = self.stdout
-        noserver = self.noserver
-        nopeak = self.nopeak
-
         if self.freq is not None: 
             sdr.setFrequency(SOAPY_SDR_RX, 0, self.freq)
         if self.rate is not None: 
@@ -177,26 +172,31 @@ class Server:
             sdr.setGainMode(SOAPY_SDR_RX, 0, True);
 
         self.status(sdr)
+        if not self.noserver: 
+            self.init_server()
+        outfile = open(self.out, "wb") if self.out else None
 
         try:
-            if not noserver: self.init_server()
             while True:
                 sr = sdr.readStream(stream, [data], size)
                 self.samples += sr.ret
                 self.tick += 1
-                if stdout: 
+                if self.stdout: 
                     sys.stdout.buffer.write(data)
                 if outfile: 
                     outfile.write(data)
-                if not nopeak: 
+                if not self.nopeak: 
                     self.peak_meter(data)
-                if not noserver and self.tick % (self.skip + 1) == 0: 
+                if not self.noserver and self.tick % (self.skip + 1) == 0: 
                     self.handle_conn(sdr, data)
         except KeyboardInterrupt:
             pass
 
-        if outfile: outfile.close()
-        if not noserver: self.cleanup_conn()
+        if outfile: 
+            outfile.close()
+        if not self.noserver: 
+            self.cleanup_conn()
+
         sdr.deactivateStream(stream) 
         sdr.closeStream(stream)
 
@@ -224,6 +224,8 @@ def main():
                         help="turn on automatic gain")
     parser.add_argument("--skip", type=int, default=0,
                         help="Number of blocks to skip sending over TCP")
+    parser.add_argument("--refresh", type=float, default=.5,
+                        help="peak meter refresh interval (seconds)")
     parser.add_argument("--float", action="store_true",
                         help="RTLTCP server sends 32-bit complex samples")
     parser.add_argument("--noserver", action="store_true",
