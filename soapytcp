@@ -30,7 +30,7 @@ class Server:
         self.max = max(self.max, abs(data.min()), abs(data.max()))
         if self.samples > self.rate * self.refresh:
             n = 20 * np.log10(self.max + .0000000001)
-            buf = "%6.1f dBFS\n" if self.dumb else "\33[2K%6.1f dBFS\r" 
+            buf = "%6.1f\n" if self.dumb else "\33[2K%6.1f dBFS\r" 
             print(buf % n, end="", file=sys.stderr)
             self.samples = 0
             self.max = 0
