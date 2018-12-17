@@ -25,16 +25,15 @@ class Server:
         for key, value in kw.items():
             setattr(self, key, value)
 
-
     def peak_meter(self, data):
         self.max = max(self.max, abs(data.min()), abs(data.max()))
+        self.samples += data.size / 2
         if self.samples > self.rate * self.refresh:
             n = 20 * np.log10(self.max + 1e-99)
             buf = "%6.1f\n" if self.dumb else "\33[2K%6.1f dBFS\r" 
             print(buf % n, end="", file=sys.stderr)
             self.samples = 0
             self.max = 0
-
 
     def open_conn(self, sock, client_address):
         print('new connection from %s:%s' % 
@@ -45,7 +44,6 @@ class Server:
         self.readbuf[sock] = b''
         self.clients[sock] = client_address
 
-
     def close_conn(self, sock):
         print('closing connection from %s:%s' % 
               self.clients[sock], file=sys.stderr)
@@ -55,11 +53,9 @@ class Server:
         del self.clients[sock]
         sock.close()
 
-
     def cleanup_conn(self):
         for sock in self.insocks:
             sock.close()
-
 
     def handle_conn(self, sdr, data):
         if not self.float:
@@ -96,7 +92,6 @@ class Server:
                         self.handle_command(sdr, self.readbuf[sock])
                         self.readbuf[sock] = b''
 
-
     def status(self, sdr):
         self.rate = sdr.getSampleRate(SOAPY_SDR_RX, 0)
         self.freq = sdr.getFrequency(SOAPY_SDR_RX, 0)
@@ -107,7 +102,6 @@ class Server:
               (self.rate / 1e6), file=sys.stderr)
         print('gain is %s dB' % 
               self.gain, file=sys.stderr)
-
 
     def handle_command(self, sdr, data):
         command, param = struct.unpack(command_fmt, data)
@@ -136,7 +130,6 @@ class Server:
             print('0x%02x unimplemented: %s' % 
                   (command, param), file=sys.stderr)
 
-
     def init_server(self):
         server = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         server.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
@@ -147,7 +140,6 @@ class Server:
         print('listening on %s port %s' % server_address, file=sys.stderr)
         self.insocks.append(server)
         self.server = server
-
 
     def start(self):
         driver = self.driver
@@ -181,7 +173,6 @@ class Server:
         try:
             while True:
                 sr = sdr.readStream(stream, [data], size)
-                self.samples += sr.ret
                 self.tick += 1
                 if self.stdout: 
                     sys.stdout.buffer.write(data)
@@ -201,7 +192,6 @@ class Server:
 
         sdr.deactivateStream(stream) 
         sdr.closeStream(stream)
-
 
 
 def main():
@@ -243,6 +233,7 @@ def main():
     args = parser.parse_args()
     server = Server(**vars(args))
     server.start()
+
 
 if __name__ == "__main__":
     main()
