@@ -178,7 +178,7 @@ class Server:
                     sys.stdout.buffer.write(data)
                 if outfile: 
                     outfile.write(data)
-                if not self.nopeak: 
+                if not self.nometer: 
                     self.peak_meter(data)
                 if not self.noserver and self.tick % (self.skip + 1) == 0: 
                     self.handle_conn(sdr, data)
@@ -222,7 +222,7 @@ def main():
                         help="RTLTCP server sends 32-bit complex samples")
     parser.add_argument("--noserver", action="store_true",
                         help="disable RTLTCP server")
-    parser.add_argument("--nopeak", action="store_true",
+    parser.add_argument("--nometer", action="store_true",
                         help="disable peak meter")
     parser.add_argument("--freeze", action="store_true",
                         help="freeze settings")
