@@ -5,24 +5,28 @@ A SDR receiver written in Python 3 using the Soapy API. Writes the cf32 stream t
 ```
 usage: soapytcp [-h] [--out OUT] [--driver DRIVER] [--host HOST] [--port PORT]
                 [--stdout] [--freq FREQ] [--rate RATE] [--gain GAIN] [--auto]
-                [--skip SKIP] [--float] [--noserver] [--nopeak] [--freeze]
+                [--skip SKIP] [--refresh REFRESH] [--float] [--noserver]
+                [--nopeak] [--freeze] [--dumb] [--append]
 
 optional arguments:
-  -h, --help       show this help message and exit
-  --out OUT        write cf32 samples to output file
-  --driver DRIVER  driver name
-  --host HOST      server host address
-  --port PORT      server port address
-  --stdout         write cf32 samples to standard output
-  --freq FREQ      set center frequency (Hz)
-  --rate RATE      set sample rate (Hz)
-  --gain GAIN      set gain (dB)
-  --auto           turn on automatic gain
-  --skip SKIP      Number of blocks to skip sending over TCP
-  --float          RTLTCP server sends 32-bit complex samples
-  --noserver       disable RTLTCP server
-  --nopeak         disable peak meter
-  --freeze         freeze settings
+  -h, --help         show this help message and exit
+  --out OUT          write cf32 samples to output file
+  --driver DRIVER    driver name
+  --host HOST        server host address
+  --port PORT        server port address
+  --stdout           write cf32 samples to standard output
+  --freq FREQ        set center frequency (Hz)
+  --rate RATE        set sample rate (Hz)
+  --gain GAIN        set gain (dB)
+  --auto             turn on automatic gain
+  --skip SKIP        Number of blocks to skip sending over TCP
+  --refresh REFRESH  peak meter refresh interval (seconds)
+  --float            RTLTCP server sends 32-bit complex samples
+  --noserver         disable RTLTCP server
+  --nopeak           disable peak meter
+  --freeze           freeze settings
+  --dumb             assume running on a dumb terminal
+  --append           append samples to output file
 ```
 
 First install the Soapy API from https://github.com/pothosware/SoapySDR/wiki.  It installs
