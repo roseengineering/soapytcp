@@ -3,10 +3,11 @@
 A SDR receiver written in Python 3 using the Soapy API. Writes the cf32 stream to a file or stdout or to a TCP socket using the RTLTCP protocol.
 
 ```
+$ soapytcp -h
 usage: soapytcp [-h] [--out OUT] [--driver DRIVER] [--host HOST] [--port PORT]
                 [--stdout] [--freq FREQ] [--rate RATE] [--gain GAIN] [--auto]
                 [--skip SKIP] [--refresh REFRESH] [--float] [--noserver]
-                [--nopeak] [--freeze] [--dumb] [--append]
+                [--nometer] [--freeze] [--dumb] [--append]
 
 optional arguments:
   -h, --help         show this help message and exit
@@ -23,7 +24,7 @@ optional arguments:
   --refresh REFRESH  peak meter refresh interval (seconds)
   --float            RTLTCP server sends 32-bit complex samples
   --noserver         disable RTLTCP server
-  --nopeak           disable peak meter
+  --nometer          disable peak meter
   --freeze           freeze settings
   --dumb             assume running on a dumb terminal
   --append           append samples to output file
