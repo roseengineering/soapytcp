@@ -109,6 +109,8 @@ class Server:
             print('frozen settings, ignoring command: 0x%02x: %s' % 
                   (command, param), file=sys.stderr)
         elif command == 0x01:
+            if self.direct_samp:
+                param = np.abs(param - 100e6)
             print('0x%02x set_center_freq: %s Hz' % 
                   (command, param), file=sys.stderr)
             sdr.setFrequency(SOAPY_SDR_RX, 0, param)
@@ -147,7 +149,7 @@ class Server:
             for res in SoapySDR.Device.enumerate(): 
                 driver = res['driver']
 
-        sdr = SoapySDR.Device(dict(driver=driver))
+        sdr = SoapySDR.Device(driver)
         stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
         size = 1024
         data = np.array([0] * size * 2, np.float32)
@@ -162,6 +164,20 @@ class Server:
             sdr.setGain(SOAPY_SDR_RX, 0, self.gain)
         if self.auto: 
             sdr.setGainMode(SOAPY_SDR_RX, 0, True);
+
+        if self.direct_samp:
+            param = self.direct_samp
+            if param.lower() == "i": param = "1"
+            if param.lower() == "q": param = "2"
+            sdr.writeSetting("direct_samp", param)
+        if self.iq_swap:
+            sdr.writeSetting("iq_swap", "true")
+        if self.biastee:
+            sdr.writeSetting("biastee", "true")
+        if self.digital_agc:
+            sdr.writeSetting("digital_agc", "true")
+        if self.digital_agc:
+            sdr.writeSetting("offset_tune", "true")
 
         self.status(sdr)
         if not self.noserver: 
@@ -230,6 +246,13 @@ def main():
                         help="assume running on a dumb terminal")
     parser.add_argument("--append", action="store_true",
                         help="append samples to output file")
+
+    parser.add_argument("--direct-samp", help="0=off, 1 or i=I, 2 or q=Q channel")
+    parser.add_argument("--iq-swap", action="store_true", help="swap IQ signals")
+    parser.add_argument("--biastee", action="store_true", help="enable bias tee")
+    parser.add_argument("--digital-agc", action="store_true", help="enable digital AGC")
+    parser.add_argument("--offset-tune", action="store_true", help="enable offset tune")
+
     args = parser.parse_args()
     server = Server(**vars(args))
     server.start()
