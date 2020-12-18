@@ -211,7 +211,8 @@ class Server:
 
 
 def main():
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(
+        formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("--out", 
                         help="write cf32 samples to output file")
     parser.add_argument("--driver", 
@@ -247,7 +248,7 @@ def main():
     parser.add_argument("--append", action="store_true",
                         help="append samples to output file")
 
-    parser.add_argument("--direct-samp", help="0=off, 1 or i=I, 2 or q=Q channel")
+    parser.add_argument("--direct-samp", help="1 or i=I, 2 or q=Q channel")
     parser.add_argument("--iq-swap", action="store_true", help="swap IQ signals")
     parser.add_argument("--biastee", action="store_true", help="enable bias tee")
     parser.add_argument("--digital-agc", action="store_true", help="enable digital AGC")
